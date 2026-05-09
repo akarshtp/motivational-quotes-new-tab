@@ -46,4 +46,18 @@ body {
     gap: 10px;
 }
 
+#gh-link {
+    color: #50c2ef; /* Deep Sea Blue hex code */
+    text-decoration: none;
+    font-size: 0.8rem;
+    text-align: center;
+    margin-top: 5px;
+    border-top: 1px solid #444;
+    padding-top: 8px;
+}
+
+#gh-link:hover {
+    color: #04232e; /* A slightly lighter blue for the hover effect */
+}
+
 .hidden { display: none !important; }
