@@ -1,0 +1,23 @@
+{
+  "manifest_version": 3,
+  "name": "ZenTab: Motivational Quotes for New Tab",
+  "version": "1.0.0",
+  "author": "Akarsh T P",
+  "description": "Start every new tab with a fresh motivational quote. Customize your experience with minimalist design and privacy-first engineering.",
+  "homepage_url": "https://github.com/akarsh-tp/zentab",
+  "icons": {
+    "48": "icons/icon-48.png",
+    "96": "icons/icon-96.png",
+    "128": "icons/icon-128.png"
+  },
+  "chrome_url_overrides": {
+    "newtab": "newtab.html"
+  },
+  "permissions": ["storage"],
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "zentab-quotes@akarsh.dev",
+      "strict_min_version": "109.0"
+    }
+  }
+}

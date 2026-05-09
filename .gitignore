@@ -1,0 +1,11 @@
+# OS Metadata
+.DS_Store
+Thumbs.db
+
+# VS Code files
+.vscode/
+
+# Build artifacts/Zips
+*.zip
+*.xpi
+
