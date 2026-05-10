@@ -1,6 +1,6 @@
 # ZenTab: Motivational Quotes for New Tab
 
-ZenTab is a minimalist extension that replaces your default new tab page with a fresh motivational quote. It is designed to provide a brief moment of inspiration without any distractions.
+ZenTab replaces your default new tab page with a clean, distraction-free motivational quote. Built as a lightweight, zero-data project, it focuses entirely on speed, elegant simplicity, and user privacy.
 
 ## Why ZenTab?
 This is a personal hobby project of mine. I wanted to create a tool that is fast, beautiful, and simple.
