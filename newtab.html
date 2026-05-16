@@ -1,25 +1,61 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
     <meta charset="utf-8">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+    <div id="bg-overlay" aria-hidden="true"></div>
     <div id="quote-container">
         <p id="quote"></p>
         <p id="author"></p>
     </div>
 
-    <!-- Settings Panel -->
     <div id="settings-panel" class="hidden">
-        <label>BG: <input type="color" id="bg-picker"></label>
-        <label>Text: <input type="color" id="text-picker"></label>
-        <a href="https://github.com/akarshtp/zentab" target="_blank" id="gh-link">GitHub Project</a>
+        <section class="settings-section">
+            <h3 class="settings-heading">Text</h3>
+            <label class="settings-row">
+                Size
+                <select id="font-size-select">
+                    <option value="small">Small</option>
+                    <option value="medium" selected>Medium</option>
+                    <option value="large">Large</option>
+                </select>
+            </label>
+            <label class="settings-row">
+                Style
+                <select id="font-family-select">
+                    <option value="sans">Sans</option>
+                    <option value="serif">Serif</option>
+                    <option value="system">System</option>
+                </select>
+            </label>
+            <label class="settings-row settings-check">
+                <input type="checkbox" id="font-italic-check" checked>
+                Italic quote
+            </label>
+            <label class="settings-row">
+                Color
+                <input type="color" id="text-picker" value="#ffffff">
+            </label>
+        </section>
+
+        <section class="settings-section">
+            <h3 class="settings-heading">Background</h3>
+            <label class="settings-row">
+                Solid color
+                <input type="color" id="bg-picker" value="#000000">
+            </label>
+            <p class="settings-hint">Or pick a preset:</p>
+            <div id="bg-preset-grid" class="bg-preset-grid"></div>
+        </section>
+
+        <button type="button" id="reset-settings-btn" class="reset-btn">Reset to defaults</button>
+        <a href="https://github.com/akarshtp/motivational-quotes-new-tab" target="_blank" rel="noopener noreferrer" id="gh-link">GitHub Project</a>
     </div>
-    <button id="edit-btn">✎</button>
+    <button type="button" id="edit-btn" title="Customize appearance">✎</button>
 
     <script src="bundled-quotes.js"></script>
     <script src="script.js"></script>
-    
 </body>
 </html>

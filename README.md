@@ -1,26 +1,44 @@
-# ZenTab: Motivational Quotes for New Tab
+# Motivational Quotes for New Tab
 
-ZenTab replaces your default new tab page with a clean, distraction-free motivational quote. Built as a lightweight, zero-data project, it focuses entirely on speed, elegant simplicity, and user privacy.
+Replace your default new tab with a clean, distraction-free motivational quote. Built as a lightweight, privacy-focused extension focused on speed and simple customization.
 
-## Why ZenTab?
-This is a personal hobby project of mine. I wanted to create a tool that is fast, beautiful, and simple.
+## Why this project?
+
+A personal hobby project: fast to open, pleasant to read, and easy to make your own.
 
 ## Features
-* **Daily Inspiration**: Automatically displays a new motivational quote every time you open a tab.
-* **Minimalist Design**: A clean interface focused entirely on the message.
-* **Custom Appearance**: Easily change the background and text colors to match your personal style using the edit button at the bottom right.
-* **Lightning Fast**: Optimized to load instantly so it never slows down your browsing experience.
+
+* **Daily inspiration**: A new motivational quote every time you open a tab.
+* **Minimalist design**: The quote stays front and center.
+* **Custom appearance** (edit button, bottom right):
+  * **Text**: size (small / medium / large), sans / serif / system fonts, italic on/off, text color.
+  * **Background**: solid color or one of eight bundled gradient presets with a readability overlay and text shadow.
+  * **Reset**: restore default look in one click.
+* **Lightning fast**: Local presets and bundled quotes keep new tabs snappy; remote quotes load in the background when online.
 
 ## Privacy and Safety
-Your privacy is a priority. ZenTab is built to be a "zero-data" extension:
-* **External Data**: To provide fresh content, the extension fetches quotes from the ZenQuotes API via the AllOrigins proxy. No personal data or identifiers are shared with these services during the request.
-* **No Tracking**: We do not track your browsing history or how you use the extension.
-* **No Data Collection**: No personal information is ever collected, stored, or transmitted.
-* **Minimal Permissions**: The extension only requests the permissions absolutely necessary to function.
-* **Safe and Secure**: Since this is an open-source hobby project, the code is transparent and free from hidden scripts or advertisements.
+
+Your privacy is a priority. This extension is built as a low-data project:
+
+* **External data**: Fresh quotes may be fetched from the [ZenQuotes](https://zenquotes.io/) API. No personal data or identifiers are sent with those requests.
+* **Local customization**: Colors, font choices, and background preset selections are stored only in your browser (`storage.local`). Nothing is uploaded.
+* **No tracking**: No browsing history or usage analytics.
+* **No data collection**: No personal information is collected, stored on a server, or sold.
+* **Minimal permissions**: `storage` for quotes and settings; network access only for the quote API host declared in the manifest.
+* **Open source**: Transparent code, no ads or hidden scripts.
+
+## Develop
+
+Bundled background images are generated once with:
+
+```bash
+python -m pip install pillow
+python scripts/gen_backgrounds.py
+```
 
 ## License
-This project is released under the MIT License. You are free to explore the code or use it as a base for your own projects.
+
+MIT License — free to explore, fork, or learn from.
 
 ---
 Developed with ❤️ by Akarsh T P

@@ -4,8 +4,48 @@ const bgPicker = document.getElementById('bg-picker');
 const textPicker = document.getElementById('text-picker');
 const editBtn = document.getElementById('edit-btn');
 const settingsPanel = document.getElementById('settings-panel');
+const fontSizeSelect = document.getElementById('font-size-select');
+const fontFamilySelect = document.getElementById('font-family-select');
+const fontItalicCheck = document.getElementById('font-italic-check');
+const bgPresetGrid = document.getElementById('bg-preset-grid');
+const resetSettingsBtn = document.getElementById('reset-settings-btn');
 
 const storage = (typeof browser !== 'undefined') ? browser.storage.local : chrome.storage.local;
+
+const SETTINGS_KEYS = [
+    'bgColor',
+    'textColor',
+    'bgMode',
+    'bgPreset',
+    'fontSize',
+    'fontFamily',
+    'fontItalic',
+    'quoteBatch',
+];
+
+const DEFAULTS = {
+    bgColor: '#000000',
+    textColor: '#ffffff',
+    bgMode: 'solid',
+    bgPreset: null,
+    fontSize: 'medium',
+    fontFamily: 'sans',
+    fontItalic: true,
+};
+
+const BG_PRESETS = [
+    { id: 'sunset', label: 'Sunset' },
+    { id: 'ocean', label: 'Ocean' },
+    { id: 'forest', label: 'Forest' },
+    { id: 'lavender', label: 'Lavender' },
+    { id: 'rose', label: 'Rose' },
+    { id: 'midnight', label: 'Midnight' },
+    { id: 'aurora', label: 'Aurora' },
+    { id: 'ember', label: 'Ember' },
+];
+
+const FONT_SIZE_CLASSES = ['font-size-small', 'font-size-medium', 'font-size-large'];
+const FONT_FAMILY_CLASSES = ['font-family-sans', 'font-family-serif', 'font-family-system'];
 
 function storageGet(keys) {
     return new Promise((resolve) => storage.get(keys, resolve));
@@ -27,7 +67,6 @@ function randomBundledQuote() {
     return arr[Math.floor(Math.random() * arr.length)];
 }
 
-/** Shuffled slice of bundled quotes for storage batch when network and cache miss. */
 function shuffleBundledForFallback(count) {
     const copy = [...BUNDLED_QUOTES];
     for (let i = copy.length - 1; i > 0; i--) {
@@ -67,10 +106,6 @@ async function mergeQuotesIntoStorage(newQuotes, displayImmediately) {
     }
 }
 
-/**
- * Refill remote quote batch. Deduplicates concurrent calls.
- * On success, caches payload for offline / timeout fallback.
- */
 async function refillBatch(displayImmediately = false) {
     if (refillPromise) return refillPromise;
 
@@ -112,47 +147,150 @@ function scheduleRefill() {
     }, REFILL_DEBOUNCE_MS);
 }
 
-// --- 1. CORE LOGIC: THE SMART BATCHER ---
-
-async function getNextQuote() {
-    storage.get(['quoteBatch', 'bgColor', 'textColor'], async (data) => {
-        if (data.bgColor) document.body.style.backgroundColor = data.bgColor;
-        if (data.textColor) document.body.style.color = data.textColor;
-
-        const batch = data.quoteBatch || [];
-
-        if (batch.length > 0) {
-            const current = batch.shift();
-            displayQuote(current.q, current.a);
-            storage.set({ quoteBatch: batch });
-
-            if (batch.length < LOW_BATCH_THRESHOLD) scheduleRefill();
-        } else {
-            const b = randomBundledQuote();
-            displayQuote(b.q, b.a);
-            scheduleRefill();
-        }
-    });
-}
-
 function displayQuote(text, author) {
     quoteEl.textContent = `"${text}"`;
     authorEl.textContent = `- ${author}`;
 }
 
-// --- 2. SETTINGS & COLORS ---
+function presetImageUrl(presetId) {
+    return `backgrounds/${presetId}.webp`;
+}
+
+function updatePresetButtonsActive(activeId) {
+    bgPresetGrid.querySelectorAll('.bg-preset-btn').forEach((btn) => {
+        btn.classList.toggle('active', btn.dataset.preset === activeId);
+    });
+}
+
+function applyAppearance(settings) {
+    const bgColor = settings.bgColor ?? DEFAULTS.bgColor;
+    const textColor = settings.textColor ?? DEFAULTS.textColor;
+    const bgMode = settings.bgMode ?? DEFAULTS.bgMode;
+    const bgPreset = settings.bgPreset ?? DEFAULTS.bgPreset;
+    const fontSize = settings.fontSize ?? DEFAULTS.fontSize;
+    const fontFamily = settings.fontFamily ?? DEFAULTS.fontFamily;
+    const fontItalic = settings.fontItalic ?? DEFAULTS.fontItalic;
+
+    document.body.style.color = textColor;
+    textPicker.value = textColor;
+
+    FONT_SIZE_CLASSES.forEach((c) => document.body.classList.remove(c));
+    document.body.classList.add(`font-size-${fontSize}`);
+    fontSizeSelect.value = fontSize;
+
+    FONT_FAMILY_CLASSES.forEach((c) => document.body.classList.remove(c));
+    if (fontFamily === 'sans') {
+        document.body.style.fontFamily = '';
+    } else {
+        document.body.classList.add(`font-family-${fontFamily}`);
+    }
+    fontFamilySelect.value = fontFamily;
+
+    document.body.classList.toggle('font-not-italic', !fontItalic);
+    fontItalicCheck.checked = fontItalic;
+
+    if (bgMode === 'preset' && bgPreset) {
+        document.body.classList.add('has-bg-preset');
+        document.body.style.backgroundImage = `url("${presetImageUrl(bgPreset)}")`;
+        document.body.style.backgroundColor = '';
+        bgPicker.value = bgColor;
+        updatePresetButtonsActive(bgPreset);
+    } else {
+        document.body.classList.remove('has-bg-preset');
+        document.body.style.backgroundImage = '';
+        document.body.style.backgroundColor = bgColor;
+        bgPicker.value = bgColor;
+        updatePresetButtonsActive(null);
+    }
+}
+
+async function loadAndApplySettings() {
+    const data = await storageGet(SETTINGS_KEYS.filter((k) => k !== 'quoteBatch'));
+    applyAppearance(data);
+    return data;
+}
+
+async function saveAppearance(partial) {
+    await storageSet(partial);
+    const data = await storageGet(SETTINGS_KEYS.filter((k) => k !== 'quoteBatch'));
+    applyAppearance(data);
+}
+
+function buildPresetGrid() {
+    bgPresetGrid.innerHTML = '';
+    BG_PRESETS.forEach(({ id, label }) => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'bg-preset-btn';
+        btn.dataset.preset = id;
+        btn.title = label;
+        btn.style.backgroundImage = `url("${presetImageUrl(id)}")`;
+        btn.addEventListener('click', () => {
+            saveAppearance({ bgMode: 'preset', bgPreset: id });
+        });
+        bgPresetGrid.appendChild(btn);
+    });
+}
+
+async function getNextQuote() {
+    const data = await storageGet(['quoteBatch']);
+    const batch = data.quoteBatch || [];
+
+    if (batch.length > 0) {
+        const current = batch.shift();
+        displayQuote(current.q, current.a);
+        await storageSet({ quoteBatch: batch });
+
+        if (batch.length < LOW_BATCH_THRESHOLD) scheduleRefill();
+    } else {
+        const b = randomBundledQuote();
+        displayQuote(b.q, b.a);
+        scheduleRefill();
+    }
+}
 
 editBtn.addEventListener('click', () => settingsPanel.classList.toggle('hidden'));
 
 bgPicker.addEventListener('input', (e) => {
-    document.body.style.backgroundColor = e.target.value;
-    storage.set({ bgColor: e.target.value });
+    saveAppearance({
+        bgMode: 'solid',
+        bgPreset: null,
+        bgColor: e.target.value,
+    });
 });
 
 textPicker.addEventListener('input', (e) => {
-    document.body.style.color = e.target.value;
-    storage.set({ textColor: e.target.value });
+    saveAppearance({ textColor: e.target.value });
 });
 
-// Start!
-getNextQuote();
+fontSizeSelect.addEventListener('change', (e) => {
+    saveAppearance({ fontSize: e.target.value });
+});
+
+fontFamilySelect.addEventListener('change', (e) => {
+    saveAppearance({ fontFamily: e.target.value });
+});
+
+fontItalicCheck.addEventListener('change', (e) => {
+    saveAppearance({ fontItalic: e.target.checked });
+});
+
+resetSettingsBtn.addEventListener('click', async () => {
+    const data = await storageGet(['quoteBatch', 'lastRemoteQuotes', 'lastRemoteQuotesAt']);
+    await storageSet({
+        bgColor: DEFAULTS.bgColor,
+        textColor: DEFAULTS.textColor,
+        bgMode: DEFAULTS.bgMode,
+        bgPreset: DEFAULTS.bgPreset,
+        fontSize: DEFAULTS.fontSize,
+        fontFamily: DEFAULTS.fontFamily,
+        fontItalic: DEFAULTS.fontItalic,
+        quoteBatch: data.quoteBatch,
+        lastRemoteQuotes: data.lastRemoteQuotes,
+        lastRemoteQuotesAt: data.lastRemoteQuotesAt,
+    });
+    applyAppearance(DEFAULTS);
+});
+
+buildPresetGrid();
+loadAndApplySettings().then(() => getNextQuote());

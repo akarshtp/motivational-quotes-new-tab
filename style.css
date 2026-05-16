@@ -4,27 +4,82 @@ body {
     display: flex;
     justify-content: center;
     align-items: center;
-    font-family: 'Segoe UI', sans-serif;
-    background-color: #000000; /* Default Black */
-    color: #ffffff;           /* Default White */
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background-color: #000000;
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    color: #ffffff;
     transition: background-color 0.3s, color 0.3s;
 }
 
+#bg-overlay {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    background: rgba(0, 0, 0, 0.4);
+    opacity: 0;
+    transition: opacity 0.3s;
+    z-index: 0;
+}
+
+body.has-bg-preset #bg-overlay {
+    opacity: 1;
+}
+
 #quote-container {
+    position: relative;
+    z-index: 1;
     max-width: 800px;
     padding: 40px;
     text-align: center;
 }
 
-#quote { font-size: 2.5rem; font-style: italic; line-height: 1.4; }
-#author { margin-top: 20px; font-size: 1.2rem; opacity: 0.8; }
+#quote {
+    font-size: 2.5rem;
+    font-style: italic;
+    line-height: 1.4;
+    margin: 0;
+}
 
-/* Settings UI */
+#author {
+    margin-top: 20px;
+    font-size: 1.2rem;
+    opacity: 0.9;
+}
+
+body.has-bg-preset #quote,
+body.has-bg-preset #author {
+    text-shadow: 0 2px 12px rgba(0, 0, 0, 0.75);
+}
+
+body.font-size-small #quote { font-size: 1.75rem; }
+body.font-size-small #author { font-size: 1rem; }
+
+body.font-size-medium #quote { font-size: 2.5rem; }
+body.font-size-medium #author { font-size: 1.2rem; }
+
+body.font-size-large #quote { font-size: 3.25rem; }
+body.font-size-large #author { font-size: 1.4rem; }
+
+body.font-family-serif {
+    font-family: Georgia, 'Times New Roman', serif;
+}
+
+body.font-family-system {
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+body.font-not-italic #quote {
+    font-style: normal;
+}
+
 #edit-btn {
     position: fixed;
     bottom: 20px;
     right: 20px;
-    background: rgba(255, 255, 255, 0.1);
+    z-index: 2;
+    background: rgba(255, 255, 255, 0.15);
     color: white;
     border: none;
     border-radius: 50%;
@@ -32,32 +87,117 @@ body {
     height: 40px;
     cursor: pointer;
     font-size: 20px;
+    backdrop-filter: blur(4px);
+}
+
+#edit-btn:hover {
+    background: rgba(255, 255, 255, 0.25);
 }
 
 #settings-panel {
     position: fixed;
     bottom: 70px;
     right: 20px;
-    background: #333;
-    padding: 10px;
-    border-radius: 8px;
+    z-index: 2;
+    background: rgba(30, 30, 30, 0.95);
+    padding: 12px;
+    border-radius: 10px;
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 8px;
+    max-width: 260px;
+    max-height: min(70vh, 520px);
+    overflow-y: auto;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+    backdrop-filter: blur(8px);
+}
+
+.settings-section {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.settings-heading {
+    margin: 0 0 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #aaa;
+}
+
+.settings-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    font-size: 0.85rem;
+    color: #eee;
+}
+
+.settings-check {
+    justify-content: flex-start;
+}
+
+.settings-hint {
+    margin: 0;
+    font-size: 0.75rem;
+    color: #999;
+}
+
+.bg-preset-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6px;
+}
+
+.bg-preset-btn {
+    aspect-ratio: 16 / 10;
+    border: 2px solid transparent;
+    border-radius: 6px;
+    padding: 0;
+    cursor: pointer;
+    background-size: cover;
+    background-position: center;
+}
+
+.bg-preset-btn:hover {
+    border-color: rgba(255, 255, 255, 0.5);
+}
+
+.bg-preset-btn.active {
+    border-color: #50c2ef;
+    box-shadow: 0 0 0 1px #50c2ef;
+}
+
+.reset-btn {
+    margin-top: 4px;
+    padding: 8px;
+    font-size: 0.8rem;
+    border: 1px solid #555;
+    border-radius: 6px;
+    background: #444;
+    color: #fff;
+    cursor: pointer;
+}
+
+.reset-btn:hover {
+    background: #555;
 }
 
 #gh-link {
-    color: #50c2ef; /* Deep Sea Blue hex code */
+    color: #50c2ef;
     text-decoration: none;
     font-size: 0.8rem;
     text-align: center;
-    margin-top: 5px;
+    margin-top: 4px;
     border-top: 1px solid #444;
     padding-top: 8px;
 }
 
 #gh-link:hover {
-    color: #04232e; /* A slightly lighter blue for the hover effect */
+    color: #7dd3fc;
 }
 
 .hidden { display: none !important; }
