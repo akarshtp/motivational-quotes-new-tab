@@ -6,12 +6,89 @@
 </head>
 <body>
     <div id="bg-overlay" aria-hidden="true"></div>
-    <div id="quote-container">
-        <p id="quote"></p>
-        <p id="author"></p>
+
+    <main id="app-shell">
+        <section id="dashboard" class="hidden" aria-label="Search and shortcuts">
+            <div id="search-section" class="dashboard-block hidden">
+                <form id="search-form" class="search-form" role="search">
+                    <input type="search" id="search-input" class="search-input" placeholder="Search the web" autocomplete="off" aria-label="Search">
+                </form>
+            </div>
+            <div id="bookmarks-section" class="dashboard-block hidden">
+                <div id="bookmarks-row-1" class="bookmarks-row"></div>
+                <div id="bookmarks-row-2" class="bookmarks-row hidden"></div>
+            </div>
+        </section>
+
+        <section id="quote-container">
+            <p id="quote"></p>
+            <p id="author"></p>
+        </section>
+    </main>
+
+    <div id="bookmark-modal" class="bookmark-modal hidden" role="dialog" aria-modal="true" aria-labelledby="bookmark-modal-heading">
+        <div class="bookmark-modal-backdrop" id="bookmark-modal-backdrop"></div>
+        <div class="bookmark-modal-card">
+            <h4 id="bookmark-modal-heading">Add bookmark</h4>
+            <input type="text" id="bookmark-modal-name" class="bookmark-modal-input" placeholder="Name" maxlength="32">
+            <input type="url" id="bookmark-modal-url" class="bookmark-modal-input" placeholder="https://..." maxlength="2048">
+            <div class="bookmark-modal-actions">
+                <button type="button" id="bookmark-modal-delete" class="bookmark-modal-delete hidden">Delete</button>
+                <button type="button" id="bookmark-modal-cancel" class="bookmark-modal-cancel">Cancel</button>
+                <button type="button" id="bookmark-modal-save" class="bookmark-modal-save">Save</button>
+            </div>
+        </div>
     </div>
 
     <div id="settings-panel" class="hidden">
+        <section class="settings-section">
+            <h3 class="settings-heading">Layout</h3>
+            <label class="settings-row">
+                Quote position
+                <select id="quote-position-select">
+                    <option value="center">Center</option>
+                    <option value="top">Top</option>
+                    <option value="bottom">Bottom</option>
+                </select>
+            </label>
+        </section>
+
+        <section class="settings-section">
+            <h3 class="settings-heading">Dashboard</h3>
+            <label class="settings-row settings-check">
+                <input type="checkbox" id="search-enabled-check">
+                Show search bar
+            </label>
+            <label class="settings-row settings-check">
+                <input type="checkbox" id="bookmarks-enabled-check">
+                Show bookmarks
+            </label>
+            <div id="dashboard-options">
+                <label class="settings-row">
+                    Theme
+                    <select id="dashboard-theme-select">
+                        <option value="dark">Dark</option>
+                        <option value="light">Light</option>
+                    </select>
+                </label>
+                <label class="settings-row">
+                    Bookmark rows
+                    <select id="bookmark-rows-select">
+                        <option value="1">1 row</option>
+                        <option value="2">2 rows</option>
+                    </select>
+                </label>
+                <label class="settings-row">
+                    Search engine
+                    <select id="search-engine-select">
+                        <option value="google">Google</option>
+                        <option value="duckduckgo">DuckDuckGo</option>
+                        <option value="bing">Bing</option>
+                    </select>
+                </label>
+            </div>
+        </section>
+
         <section class="settings-section">
             <h3 class="settings-heading">Text</h3>
             <label class="settings-row">

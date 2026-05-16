@@ -1,5 +1,20 @@
 const quoteEl = document.getElementById('quote');
 const authorEl = document.getElementById('author');
+const dashboardEl = document.getElementById('dashboard');
+const searchSection = document.getElementById('search-section');
+const bookmarksSection = document.getElementById('bookmarks-section');
+const searchForm = document.getElementById('search-form');
+const searchInput = document.getElementById('search-input');
+const bookmarksRow1 = document.getElementById('bookmarks-row-1');
+const bookmarksRow2 = document.getElementById('bookmarks-row-2');
+const bookmarkModal = document.getElementById('bookmark-modal');
+const bookmarkModalBackdrop = document.getElementById('bookmark-modal-backdrop');
+const bookmarkModalHeading = document.getElementById('bookmark-modal-heading');
+const bookmarkModalName = document.getElementById('bookmark-modal-name');
+const bookmarkModalUrl = document.getElementById('bookmark-modal-url');
+const bookmarkModalSave = document.getElementById('bookmark-modal-save');
+const bookmarkModalCancel = document.getElementById('bookmark-modal-cancel');
+const bookmarkModalDelete = document.getElementById('bookmark-modal-delete');
 const bgPicker = document.getElementById('bg-picker');
 const textPicker = document.getElementById('text-picker');
 const editBtn = document.getElementById('edit-btn');
@@ -9,8 +24,28 @@ const fontFamilySelect = document.getElementById('font-family-select');
 const fontItalicCheck = document.getElementById('font-italic-check');
 const bgPresetGrid = document.getElementById('bg-preset-grid');
 const resetSettingsBtn = document.getElementById('reset-settings-btn');
+const quotePositionSelect = document.getElementById('quote-position-select');
+const searchEnabledCheck = document.getElementById('search-enabled-check');
+const bookmarksEnabledCheck = document.getElementById('bookmarks-enabled-check');
+const dashboardOptionsEl = document.getElementById('dashboard-options');
+const dashboardThemeSelect = document.getElementById('dashboard-theme-select');
+const bookmarkRowsSelect = document.getElementById('bookmark-rows-select');
+const searchEngineSelect = document.getElementById('search-engine-select');
+
+let editingBookmarkId = null;
 
 const storage = (typeof browser !== 'undefined') ? browser.storage.local : chrome.storage.local;
+
+const SEARCH_ENGINES = {
+    google: 'https://www.google.com/search?q=',
+    duckduckgo: 'https://duckduckgo.com/?q=',
+    bing: 'https://www.bing.com/search?q=',
+};
+
+const LINKS_PER_ROW = 8;
+const MAX_SHORTCUTS = 16;
+
+const QUOTE_POSITION_CLASSES = ['quote-position-center', 'quote-position-top', 'quote-position-bottom'];
 
 const SETTINGS_KEYS = [
     'bgColor',
@@ -20,6 +55,13 @@ const SETTINGS_KEYS = [
     'fontSize',
     'fontFamily',
     'fontItalic',
+    'quotePosition',
+    'searchEnabled',
+    'bookmarksEnabled',
+    'dashboardTheme',
+    'bookmarkRows',
+    'searchEngine',
+    'shortcuts',
     'quoteBatch',
 ];
 
@@ -31,6 +73,13 @@ const DEFAULTS = {
     fontSize: 'medium',
     fontFamily: 'sans',
     fontItalic: true,
+    quotePosition: 'center',
+    searchEnabled: false,
+    bookmarksEnabled: false,
+    dashboardTheme: 'dark',
+    bookmarkRows: 1,
+    searchEngine: 'google',
+    shortcuts: [],
 };
 
 const BG_PRESETS = [
@@ -156,10 +205,211 @@ function presetImageUrl(presetId) {
     return `backgrounds/${presetId}.webp`;
 }
 
+function normalizeUrl(raw) {
+    const trimmed = raw.trim();
+    if (!trimmed) return '';
+    if (/^https?:\/\//i.test(trimmed)) return trimmed;
+    return `https://${trimmed}`;
+}
+
+function shortcutInitial(title, url) {
+    const t = (title || '').trim();
+    if (t) return t.charAt(0).toUpperCase();
+    try {
+        return new URL(normalizeUrl(url)).hostname.charAt(0).toUpperCase();
+    } catch {
+        return '?';
+    }
+}
+
+function newShortcutId() {
+    return `s_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+}
+
 function updatePresetButtonsActive(activeId) {
     bgPresetGrid.querySelectorAll('.bg-preset-btn').forEach((btn) => {
         btn.classList.toggle('active', btn.dataset.preset === activeId);
     });
+}
+
+function applyQuotePosition(position) {
+    QUOTE_POSITION_CLASSES.forEach((c) => document.body.classList.remove(c));
+    const valid = ['center', 'top', 'bottom'];
+    const pos = valid.includes(position) ? position : DEFAULTS.quotePosition;
+    document.body.classList.add(`quote-position-${pos}`);
+    quotePositionSelect.value = pos;
+}
+
+function createBookmarkTile(item) {
+    const tile = document.createElement('div');
+    tile.className = 'bookmark-tile';
+
+    const editBtn = document.createElement('button');
+    editBtn.type = 'button';
+    editBtn.className = 'bookmark-edit-btn';
+    editBtn.title = 'Edit bookmark';
+    editBtn.setAttribute('aria-label', `Edit ${item.title}`);
+    editBtn.textContent = '✎';
+    editBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        openBookmarkModal(item.id);
+    });
+
+    const link = document.createElement('a');
+    link.className = 'bookmark-link';
+    link.href = item.url;
+    link.title = item.title;
+
+    const icon = document.createElement('span');
+    icon.className = 'bookmark-icon';
+    icon.textContent = shortcutInitial(item.title, item.url);
+
+    const label = document.createElement('span');
+    label.textContent = item.title;
+
+    link.appendChild(icon);
+    link.appendChild(label);
+    tile.appendChild(editBtn);
+    tile.appendChild(link);
+    return tile;
+}
+
+function createAddBookmarkTile() {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'bookmark-add-tile';
+    btn.title = 'Add bookmark';
+    btn.setAttribute('aria-label', 'Add bookmark');
+    btn.innerHTML = '<span class="bookmark-add-icon">+</span><span>Add</span>';
+    btn.addEventListener('click', () => openBookmarkModal(null));
+    return btn;
+}
+
+function renderBookmarkRow(container, items, includeAddButton) {
+    container.innerHTML = '';
+    items.forEach((item) => container.appendChild(createBookmarkTile(item)));
+    if (includeAddButton) container.appendChild(createAddBookmarkTile());
+}
+
+function renderBookmarks(shortcuts, rows) {
+    const list = shortcuts || [];
+    const row1Items = list.slice(0, LINKS_PER_ROW);
+    const row2Items = rows === 2 ? list.slice(LINKS_PER_ROW, LINKS_PER_ROW * 2) : [];
+    const canAddMore = list.length < MAX_SHORTCUTS;
+
+    renderBookmarkRow(
+        bookmarksRow1,
+        row1Items,
+        canAddMore && (rows === 1 || row1Items.length < LINKS_PER_ROW),
+    );
+    renderBookmarkRow(
+        bookmarksRow2,
+        row2Items,
+        canAddMore && rows === 2 && row1Items.length >= LINKS_PER_ROW,
+    );
+}
+
+function openBookmarkModal(bookmarkId) {
+    editingBookmarkId = bookmarkId;
+    bookmarkModalDelete.classList.toggle('hidden', !bookmarkId);
+    bookmarkModalHeading.textContent = bookmarkId ? 'Edit bookmark' : 'Add bookmark';
+
+    if (bookmarkId) {
+        storageGet(['shortcuts']).then((data) => {
+            const item = (data.shortcuts || []).find((s) => s.id === bookmarkId);
+            bookmarkModalName.value = item ? item.title : '';
+            bookmarkModalUrl.value = item ? item.url : '';
+        });
+    } else {
+        bookmarkModalName.value = '';
+        bookmarkModalUrl.value = '';
+    }
+
+    bookmarkModal.classList.remove('hidden');
+    bookmarkModalName.focus();
+}
+
+function closeBookmarkModal() {
+    editingBookmarkId = null;
+    bookmarkModal.classList.add('hidden');
+}
+
+async function saveBookmarkFromModal() {
+    const title = bookmarkModalName.value.trim();
+    const url = normalizeUrl(bookmarkModalUrl.value);
+    if (!title || !url) return;
+
+    try {
+        new URL(url);
+    } catch {
+        return;
+    }
+
+    const data = await storageGet(['shortcuts']);
+    const list = data.shortcuts || [];
+
+    if (editingBookmarkId) {
+        const idx = list.findIndex((s) => s.id === editingBookmarkId);
+        if (idx >= 0) {
+            list[idx].title = title;
+            list[idx].url = url;
+        }
+    } else {
+        if (list.length >= MAX_SHORTCUTS) return;
+        list.push({ id: newShortcutId(), title, url });
+    }
+
+    await saveSettings({ shortcuts: list });
+    closeBookmarkModal();
+}
+
+async function deleteBookmarkFromModal() {
+    if (!editingBookmarkId) return;
+    const data = await storageGet(['shortcuts']);
+    const list = (data.shortcuts || []).filter((s) => s.id !== editingBookmarkId);
+    await saveSettings({ shortcuts: list });
+    closeBookmarkModal();
+}
+
+async function migrateLegacyDashboardFlags(data) {
+    if (data.dashboardEnabled && data.searchEnabled === undefined) {
+        const patch = { searchEnabled: true, bookmarksEnabled: true };
+        await storageSet(patch);
+        return { ...data, ...patch };
+    }
+    return data;
+}
+
+function applyDashboard(settings) {
+    const searchOn = !!(settings.searchEnabled ?? DEFAULTS.searchEnabled);
+    const bookmarksOn = !!(settings.bookmarksEnabled ?? DEFAULTS.bookmarksEnabled);
+    const anyDashboard = searchOn || bookmarksOn;
+    const theme = settings.dashboardTheme ?? DEFAULTS.dashboardTheme;
+    const rows = Number(settings.bookmarkRows ?? DEFAULTS.bookmarkRows);
+    const engine = settings.searchEngine ?? DEFAULTS.searchEngine;
+    const shortcuts = Array.isArray(settings.shortcuts) ? settings.shortcuts : [];
+
+    document.body.classList.toggle('dashboard-active', anyDashboard);
+    dashboardEl.classList.toggle('hidden', !anyDashboard);
+    searchSection.classList.toggle('hidden', !searchOn);
+    bookmarksSection.classList.toggle('hidden', !bookmarksOn);
+    dashboardOptionsEl.classList.toggle('disabled', !anyDashboard);
+
+    searchEnabledCheck.checked = searchOn;
+    bookmarksEnabledCheck.checked = bookmarksOn;
+    dashboardThemeSelect.value = theme;
+    bookmarkRowsSelect.value = String(rows === 2 ? 2 : 1);
+    searchEngineSelect.value = SEARCH_ENGINES[engine] ? engine : 'google';
+
+    dashboardEl.classList.remove('theme-dark', 'theme-light');
+    dashboardEl.classList.add(theme === 'light' ? 'theme-light' : 'theme-dark');
+
+    bookmarksRow2.classList.toggle('hidden', !bookmarksOn || rows !== 2);
+
+    if (bookmarksOn) {
+        renderBookmarks(shortcuts, rows);
+    }
 }
 
 function applyAppearance(settings) {
@@ -204,16 +454,23 @@ function applyAppearance(settings) {
     }
 }
 
+function applyAllSettings(settings) {
+    applyAppearance(settings);
+    applyQuotePosition(settings.quotePosition ?? DEFAULTS.quotePosition);
+    applyDashboard(settings);
+}
+
 async function loadAndApplySettings() {
-    const data = await storageGet(SETTINGS_KEYS.filter((k) => k !== 'quoteBatch'));
-    applyAppearance(data);
+    let data = await storageGet([...SETTINGS_KEYS.filter((k) => k !== 'quoteBatch'), 'dashboardEnabled']);
+    data = await migrateLegacyDashboardFlags(data);
+    applyAllSettings(data);
     return data;
 }
 
-async function saveAppearance(partial) {
+async function saveSettings(partial) {
     await storageSet(partial);
     const data = await storageGet(SETTINGS_KEYS.filter((k) => k !== 'quoteBatch'));
-    applyAppearance(data);
+    applyAllSettings(data);
 }
 
 function buildPresetGrid() {
@@ -226,7 +483,7 @@ function buildPresetGrid() {
         btn.title = label;
         btn.style.backgroundImage = `url("${presetImageUrl(id)}")`;
         btn.addEventListener('click', () => {
-            saveAppearance({ bgMode: 'preset', bgPreset: id });
+            saveSettings({ bgMode: 'preset', bgPreset: id });
         });
         bgPresetGrid.appendChild(btn);
     });
@@ -249,10 +506,21 @@ async function getNextQuote() {
     }
 }
 
+searchForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const query = searchInput.value.trim();
+    if (!query) return;
+    storageGet(['searchEngine']).then((data) => {
+        const key = SEARCH_ENGINES[data.searchEngine] ? data.searchEngine : 'google';
+        const base = SEARCH_ENGINES[key];
+        window.location.href = base + encodeURIComponent(query);
+    });
+});
+
 editBtn.addEventListener('click', () => settingsPanel.classList.toggle('hidden'));
 
 bgPicker.addEventListener('input', (e) => {
-    saveAppearance({
+    saveSettings({
         bgMode: 'solid',
         bgPreset: null,
         bgColor: e.target.value,
@@ -260,36 +528,64 @@ bgPicker.addEventListener('input', (e) => {
 });
 
 textPicker.addEventListener('input', (e) => {
-    saveAppearance({ textColor: e.target.value });
+    saveSettings({ textColor: e.target.value });
 });
 
 fontSizeSelect.addEventListener('change', (e) => {
-    saveAppearance({ fontSize: e.target.value });
+    saveSettings({ fontSize: e.target.value });
 });
 
 fontFamilySelect.addEventListener('change', (e) => {
-    saveAppearance({ fontFamily: e.target.value });
+    saveSettings({ fontFamily: e.target.value });
 });
 
 fontItalicCheck.addEventListener('change', (e) => {
-    saveAppearance({ fontItalic: e.target.checked });
+    saveSettings({ fontItalic: e.target.checked });
+});
+
+quotePositionSelect.addEventListener('change', (e) => {
+    saveSettings({ quotePosition: e.target.value });
+});
+
+searchEnabledCheck.addEventListener('change', (e) => {
+    saveSettings({ searchEnabled: e.target.checked });
+});
+
+bookmarksEnabledCheck.addEventListener('change', (e) => {
+    saveSettings({ bookmarksEnabled: e.target.checked });
+});
+
+bookmarkModalSave.addEventListener('click', () => saveBookmarkFromModal());
+bookmarkModalCancel.addEventListener('click', () => closeBookmarkModal());
+bookmarkModalDelete.addEventListener('click', () => deleteBookmarkFromModal());
+bookmarkModalBackdrop.addEventListener('click', () => closeBookmarkModal());
+
+bookmarkModal.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeBookmarkModal();
+});
+
+dashboardThemeSelect.addEventListener('change', (e) => {
+    saveSettings({ dashboardTheme: e.target.value });
+});
+
+bookmarkRowsSelect.addEventListener('change', (e) => {
+    saveSettings({ bookmarkRows: Number(e.target.value) });
+});
+
+searchEngineSelect.addEventListener('change', (e) => {
+    saveSettings({ searchEngine: e.target.value });
 });
 
 resetSettingsBtn.addEventListener('click', async () => {
     const data = await storageGet(['quoteBatch', 'lastRemoteQuotes', 'lastRemoteQuotesAt']);
     await storageSet({
-        bgColor: DEFAULTS.bgColor,
-        textColor: DEFAULTS.textColor,
-        bgMode: DEFAULTS.bgMode,
-        bgPreset: DEFAULTS.bgPreset,
-        fontSize: DEFAULTS.fontSize,
-        fontFamily: DEFAULTS.fontFamily,
-        fontItalic: DEFAULTS.fontItalic,
+        ...DEFAULTS,
         quoteBatch: data.quoteBatch,
         lastRemoteQuotes: data.lastRemoteQuotes,
         lastRemoteQuotesAt: data.lastRemoteQuotesAt,
     });
-    applyAppearance(DEFAULTS);
+    closeBookmarkModal();
+    applyAllSettings(DEFAULTS);
 });
 
 buildPresetGrid();
