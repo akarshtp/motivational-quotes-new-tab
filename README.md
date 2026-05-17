@@ -1,6 +1,6 @@
 # Motivational Quotes for New Tab
 
-Replace your default new tab with a clean, distraction-free motivational quote. Built as a lightweight, privacy-focused extension focused on speed and simple customization.
+Replace your default new tab with a clean, distraction free motivational quote. Built as a lightweight, privacy focused extension focused on speed and simple customization.
 
 ## Why this project?
 
@@ -38,7 +38,9 @@ python scripts/gen_backgrounds.py
 
 ## License
 
-MIT License — free to explore, fork, or learn from.
+MIT License: free to explore, fork, or learn from.
 
 ---
 Developed with ❤️ by Akarsh T P
+
+![Dashboard Demo](screenshot/demo1.png)
