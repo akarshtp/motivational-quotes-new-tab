@@ -8,3 +8,6 @@ Thumbs.db
 # Build artifacts/Zips
 *.zip
 *.xpi
+
+# Ignore the version file
+version  
