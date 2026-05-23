@@ -16,6 +16,8 @@ A personal hobby project: fast to open, pleasant to read, and easy to make your 
   * A dashboard option to show a search bar and your favorite bookmarks.
   * Click to copy quotes directly to your clipboard.
   * Save your favorite quotes to view them later.
+  * View a history of your recently seen quotes so you never lose a good one.
+  * Export and import your custom settings, favorites, and bookmarks as a backup.
 * **Custom Appearance**: Click the edit button in the bottom right to change how things look.
   * **Text**: Adjust the size, choose between sans, serif, monospace, cursive, or system fonts, toggle italics, and pick any text color.
   * **Background**: Pick a solid color, select one of the bundled gradient presets, or upload your own custom background image.

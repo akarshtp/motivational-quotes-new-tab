@@ -68,6 +68,17 @@
         </div>
     </div>
 
+    <div id="history-modal" class="favorites-modal hidden" role="dialog" aria-modal="true" aria-labelledby="history-modal-heading">
+        <div class="favorites-modal-backdrop" id="history-modal-backdrop"></div>
+        <div class="favorites-modal-card">
+            <div class="favorites-modal-header">
+                <h4 id="history-modal-heading">Previously Seen</h4>
+                <button type="button" id="history-modal-close" class="favorites-modal-close" aria-label="Close">&times;</button>
+            </div>
+            <div id="history-modal-list" class="favorites-modal-list"></div>
+        </div>
+    </div>
+
     <div id="confirm-modal" class="confirm-modal hidden" role="alertdialog" aria-modal="true" aria-labelledby="confirm-modal-heading">
         <div class="confirm-modal-backdrop" id="confirm-modal-backdrop"></div>
         <div class="confirm-modal-card">
@@ -106,6 +117,7 @@
                 <input type="checkbox" id="greeting-enabled-check" checked>
                 Show greeting
             </label>
+
         </section>
 
         <section class="settings-section">
@@ -190,11 +202,21 @@
             <input type="file" id="bg-custom-input" accept="image/*" class="hidden">
         </section>
 
-        <button type="button" id="view-favorites-btn" class="view-favorites-btn">View Favorites <span id="favorites-count"></span></button>
+        <div style="display:flex; gap:8px; margin-bottom: 8px;">
+            <button type="button" id="view-favorites-btn" class="view-favorites-btn" style="margin:0;">Favorites <span id="favorites-count"></span></button>
+            <button type="button" id="view-history-btn" class="view-favorites-btn" style="margin:0;">History</button>
+        </div>
+
+        <div style="display:flex; gap:8px; margin-bottom: 8px;">
+            <button type="button" id="export-data-btn" class="view-favorites-btn" style="margin:0;">Export Backup</button>
+            <button type="button" id="import-data-btn" class="view-favorites-btn" style="margin:0;">Import Backup</button>
+            <input type="file" id="import-data-input" accept=".json" class="hidden">
+        </div>
 
         <button type="button" id="reset-settings-btn" class="reset-btn">Reset to defaults</button>
         <a href="https://github.com/akarshtp/motivational-quotes-new-tab" target="_blank" rel="noopener noreferrer" id="gh-link">GitHub Project</a>
     </div>
+
     <button type="button" id="edit-btn" title="Customize appearance">✎</button>
 
     <script src="bundled-quotes.js"></script>

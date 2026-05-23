@@ -57,6 +57,14 @@ const confirmModalConfirm = document.getElementById('confirm-modal-confirm');
 const bgCustomBtn = document.getElementById('bg-custom-btn');
 const bgCustomRemove = document.getElementById('bg-custom-remove');
 const bgCustomInput = document.getElementById('bg-custom-input');
+const historyModal = document.getElementById('history-modal');
+const historyModalBackdrop = document.getElementById('history-modal-backdrop');
+const historyModalClose = document.getElementById('history-modal-close');
+const historyModalList = document.getElementById('history-modal-list');
+const viewHistoryBtn = document.getElementById('view-history-btn');
+const exportDataBtn = document.getElementById('export-data-btn');
+const importDataBtn = document.getElementById('import-data-btn');
+const importDataInput = document.getElementById('import-data-input');
 
 /* ═══════════════════════ STATE ═══════════════════════ */
 let editingBookmarkId = null;
@@ -110,6 +118,7 @@ const SETTINGS_KEYS = [
     'clockFormat',
     'greetingEnabled',
     'favorites',
+    'quoteHistory',
 ];
 
 const DEFAULTS = {
@@ -131,6 +140,7 @@ const DEFAULTS = {
     clockFormat: '12h',
     greetingEnabled: true,
     favorites: [],
+    quoteHistory: [],
 };
 
 const BG_PRESETS = [
@@ -154,10 +164,9 @@ const LOW_BATCH_THRESHOLD = 5;
 let refillPromise = null;
 let refillDebounceTimer = null;
 
-/* ═══════════════════════ QUOTE FETCHING ═══════════════════════ */
+/* ═══════════════════════ QUOTE FETCHING & CATEGORIES ═══════════════════════ */
 function randomBundledQuote() {
-    const arr = BUNDLED_QUOTES;
-    return arr[Math.floor(Math.random() * arr.length)];
+    return BUNDLED_QUOTES[Math.floor(Math.random() * BUNDLED_QUOTES.length)];
 }
 
 function shuffleBundledForFallback(count) {
@@ -213,8 +222,10 @@ async function refillBatch(displayImmediately = false) {
         } catch (_err) {
             const data = await storageGet(['quoteBatch', 'lastRemoteQuotes']);
             const existing = data.quoteBatch || [];
+            
             let inject = Array.isArray(data.lastRemoteQuotes) ? data.lastRemoteQuotes : [];
             if (inject.length === 0) inject = shuffleBundledForFallback(15);
+            
             const combined = [...existing, ...inject];
             await storageSet({ quoteBatch: combined });
 
@@ -246,6 +257,18 @@ function displayQuote(text, author) {
     quoteEl.textContent = `\u201C${text}\u201D`;
     authorEl.textContent = `\u2014 ${author}`;
     updateFavButton();
+    addToHistory(text, author);
+}
+
+function addToHistory(text, author) {
+    storageGet(['quoteHistory']).then((data) => {
+        let history = data.quoteHistory || [];
+        if (history.length > 0 && history[0].q === text) return;
+        
+        history.unshift({ q: text, a: author });
+        if (history.length > 20) history.pop();
+        storageSet({ quoteHistory: history });
+    });
 }
 
 /* ═══════════════════════ CLOCK ═══════════════════════ */
@@ -1018,6 +1041,92 @@ favoritesModal.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') closeFavoritesModal();
 });
 
+/* History modal */
+function openHistoryModal() {
+    storageGet(['quoteHistory']).then((data) => {
+        renderHistoryModal(data.quoteHistory || []);
+        historyModal.classList.remove('hidden');
+    });
+}
+
+function closeHistoryModal() {
+    historyModal.classList.add('hidden');
+}
+
+function renderHistoryModal(hist) {
+    if (!hist || hist.length === 0) {
+        historyModalList.innerHTML = '<p class="favorites-empty">No quote history yet.</p>';
+        return;
+    }
+    historyModalList.innerHTML = '';
+    hist.forEach((item) => {
+        const el = document.createElement('div');
+        el.className = 'favorite-item';
+
+        const content = document.createElement('div');
+        content.className = 'favorite-content';
+
+        const text = document.createElement('span');
+        text.className = 'favorite-text';
+        text.textContent = `\u201C${item.q}\u201D`;
+
+        const author = document.createElement('span');
+        author.className = 'favorite-author';
+        author.textContent = `\u2014 ${item.a}`;
+
+        content.appendChild(text);
+        content.appendChild(author);
+
+        const actions = document.createElement('div');
+        actions.className = 'favorite-actions';
+
+        const copyFavBtn = document.createElement('button');
+        copyFavBtn.type = 'button';
+        copyFavBtn.className = 'favorite-copy';
+        copyFavBtn.title = 'Copy quote';
+        copyFavBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
+        copyFavBtn.addEventListener('click', () => {
+            const t = `\u201C${item.q}\u201D \u2014 ${item.a}`;
+            navigator.clipboard.writeText(t).then(() => showToast('Quote copied!'));
+        });
+
+        const addFavBtn = document.createElement('button');
+        addFavBtn.type = 'button';
+        addFavBtn.className = 'favorite-copy';
+        addFavBtn.title = 'Save to favorites';
+        addFavBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>';
+        addFavBtn.addEventListener('click', () => {
+            storageGet(['favorites']).then((data) => {
+                const f = data.favorites || [];
+                if (!f.some(x => x.q === item.q && x.a === item.a)) {
+                    f.unshift(item);
+                    storageSet({favorites: f}).then(() => {
+                        updateFavoritesCount(f);
+                        updateFavButton();
+                        showToast('Saved to favorites');
+                    });
+                } else {
+                    showToast('Already in favorites');
+                }
+            });
+        });
+
+        actions.appendChild(copyFavBtn);
+        actions.appendChild(addFavBtn);
+
+        el.appendChild(content);
+        el.appendChild(actions);
+        historyModalList.appendChild(el);
+    });
+}
+
+viewHistoryBtn.addEventListener('click', openHistoryModal);
+historyModalClose.addEventListener('click', closeHistoryModal);
+historyModalBackdrop.addEventListener('click', closeHistoryModal);
+historyModal.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeHistoryModal();
+});
+
 /* Reset — with confirmation */
 function openConfirmModal() {
     confirmModal.classList.remove('hidden');
@@ -1073,6 +1182,45 @@ bgCustomRemove.addEventListener('click', async () => {
     await storageSet({ bgCustomImage: null });
     await saveSettings({ bgMode: 'solid', bgPreset: null });
     showToast('Custom image removed');
+});
+
+/* Export / Import */
+exportDataBtn.addEventListener('click', async () => {
+    const data = await storageGet(null);
+    const jsonStr = JSON.stringify(data, null, 2);
+    const blob = new Blob([jsonStr], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'motivational-tab-backup.json';
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast('Backup exported');
+});
+
+importDataBtn.addEventListener('click', () => {
+    importDataInput.click();
+});
+
+importDataInput.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+        try {
+            const data = JSON.parse(event.target.result);
+            await storageSet(data);
+            cachedBgCustomImage = data.bgCustomImage || null;
+            applyAllSettings(data);
+            importDataInput.value = '';
+            closeSettings();
+            showToast('Backup imported successfully');
+        } catch (err) {
+            showToast('Invalid backup file');
+            importDataInput.value = '';
+        }
+    };
+    reader.readAsText(file);
 });
 
 /* ═══════════════════════ INIT ═══════════════════════ */
