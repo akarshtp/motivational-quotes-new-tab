@@ -52,4 +52,4 @@ MIT License: free to explore, fork, or learn from.
 ---
 Developed with ❤️ by Akarsh T P
 
-![Dashboard Demo](screenshot/v2/demo2.png)
+![Dashboard Demo](screenshot/v3/demo1.png)
