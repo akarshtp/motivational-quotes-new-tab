@@ -1,3 +1,4 @@
+/* ═══════════════════════ DOM REFERENCES ═══════════════════════ */
 const quoteEl = document.getElementById('quote');
 const authorEl = document.getElementById('author');
 const dashboardEl = document.getElementById('dashboard');
@@ -31,11 +32,52 @@ const dashboardOptionsEl = document.getElementById('dashboard-options');
 const dashboardThemeSelect = document.getElementById('dashboard-theme-select');
 const bookmarkRowsSelect = document.getElementById('bookmark-rows-select');
 const searchEngineSelect = document.getElementById('search-engine-select');
+const clockContainer = document.getElementById('clock-container');
+const clockTimeEl = document.getElementById('clock-time');
+const clockDateEl = document.getElementById('clock-date');
+const greetingEl = document.getElementById('greeting');
+const copyBtn = document.getElementById('copy-btn');
+const favBtn = document.getElementById('fav-btn');
+const favIcon = document.getElementById('fav-icon');
+const toastEl = document.getElementById('toast');
+const clockEnabledCheck = document.getElementById('clock-enabled-check');
+const clockFormatSelect = document.getElementById('clock-format-select');
+const clockFormatRow = document.getElementById('clock-format-row');
+const greetingEnabledCheck = document.getElementById('greeting-enabled-check');
+const favoritesModal = document.getElementById('favorites-modal');
+const favoritesModalBackdrop = document.getElementById('favorites-modal-backdrop');
+const favoritesModalClose = document.getElementById('favorites-modal-close');
+const favoritesModalList = document.getElementById('favorites-modal-list');
+const viewFavoritesBtn = document.getElementById('view-favorites-btn');
+const favoritesCountEl = document.getElementById('favorites-count');
+const confirmModal = document.getElementById('confirm-modal');
+const confirmModalBackdrop = document.getElementById('confirm-modal-backdrop');
+const confirmModalCancel = document.getElementById('confirm-modal-cancel');
+const confirmModalConfirm = document.getElementById('confirm-modal-confirm');
+const bgCustomBtn = document.getElementById('bg-custom-btn');
+const bgCustomRemove = document.getElementById('bg-custom-remove');
+const bgCustomInput = document.getElementById('bg-custom-input');
 
+/* ═══════════════════════ STATE ═══════════════════════ */
 let editingBookmarkId = null;
+let currentQuote = { q: '', a: '' };
+let clockInterval = null;
+let toastTimeout = null;
+let settingsPanelOpen = false;
+let cachedBgCustomImage = null;
 
+/* ═══════════════════════ STORAGE ═══════════════════════ */
 const storage = (typeof browser !== 'undefined') ? browser.storage.local : chrome.storage.local;
 
+function storageGet(keys) {
+    return new Promise((resolve) => storage.get(keys, resolve));
+}
+
+function storageSet(obj) {
+    return new Promise((resolve) => storage.set(obj, resolve));
+}
+
+/* ═══════════════════════ CONSTANTS ═══════════════════════ */
 const SEARCH_ENGINES = {
     google: 'https://www.google.com/search?q=',
     duckduckgo: 'https://duckduckgo.com/?q=',
@@ -44,6 +86,7 @@ const SEARCH_ENGINES = {
 
 const LINKS_PER_ROW = 8;
 const MAX_SHORTCUTS = 16;
+const MAX_FAVORITES = 50;
 
 const QUOTE_POSITION_CLASSES = ['quote-position-center', 'quote-position-top', 'quote-position-bottom'];
 
@@ -63,6 +106,10 @@ const SETTINGS_KEYS = [
     'searchEngine',
     'shortcuts',
     'quoteBatch',
+    'clockEnabled',
+    'clockFormat',
+    'greetingEnabled',
+    'favorites',
 ];
 
 const DEFAULTS = {
@@ -80,6 +127,10 @@ const DEFAULTS = {
     bookmarkRows: 1,
     searchEngine: 'google',
     shortcuts: [],
+    clockEnabled: true,
+    clockFormat: '12h',
+    greetingEnabled: true,
+    favorites: [],
 };
 
 const BG_PRESETS = [
@@ -94,15 +145,7 @@ const BG_PRESETS = [
 ];
 
 const FONT_SIZE_CLASSES = ['font-size-small', 'font-size-medium', 'font-size-large'];
-const FONT_FAMILY_CLASSES = ['font-family-sans', 'font-family-serif', 'font-family-system'];
-
-function storageGet(keys) {
-    return new Promise((resolve) => storage.get(keys, resolve));
-}
-
-function storageSet(obj) {
-    return new Promise((resolve) => storage.set(obj, resolve));
-}
+const FONT_FAMILY_CLASSES = ['font-family-sans', 'font-family-serif', 'font-family-mono', 'font-family-cursive', 'font-family-system'];
 
 const FETCH_TIMEOUT_MS = 8000;
 const REFILL_DEBOUNCE_MS = 350;
@@ -111,6 +154,7 @@ const LOW_BATCH_THRESHOLD = 5;
 let refillPromise = null;
 let refillDebounceTimer = null;
 
+/* ═══════════════════════ QUOTE FETCHING ═══════════════════════ */
 function randomBundledQuote() {
     const arr = BUNDLED_QUOTES;
     return arr[Math.floor(Math.random() * arr.length)];
@@ -196,11 +240,203 @@ function scheduleRefill() {
     }, REFILL_DEBOUNCE_MS);
 }
 
+/* ═══════════════════════ DISPLAY QUOTE ═══════════════════════ */
 function displayQuote(text, author) {
-    quoteEl.textContent = `"${text}"`;
-    authorEl.textContent = `- ${author}`;
+    currentQuote = { q: text, a: author };
+    quoteEl.textContent = `\u201C${text}\u201D`;
+    authorEl.textContent = `\u2014 ${author}`;
+    updateFavButton();
 }
 
+/* ═══════════════════════ CLOCK ═══════════════════════ */
+const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+
+function updateClock(format) {
+    const now = new Date();
+    const fmt = format || '12h';
+
+    let hours = now.getHours();
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    let timeStr;
+
+    if (fmt === '12h') {
+        const ampm = hours >= 12 ? 'PM' : 'AM';
+        hours = hours % 12 || 12;
+        timeStr = `${hours}:${minutes} ${ampm}`;
+    } else {
+        timeStr = `${String(hours).padStart(2, '0')}:${minutes}`;
+    }
+
+    clockTimeEl.textContent = timeStr;
+    clockDateEl.textContent = `${DAY_NAMES[now.getDay()]}, ${MONTH_NAMES[now.getMonth()]} ${now.getDate()}`;
+
+    /* Keep greeting in sync if visible */
+    if (!greetingEl.classList.contains('hidden')) {
+        const fresh = getGreeting();
+        if (greetingEl.textContent !== fresh) greetingEl.textContent = fresh;
+    }
+}
+
+function startClock(format) {
+    if (clockInterval) clearInterval(clockInterval);
+    updateClock(format);
+    clockInterval = setInterval(() => updateClock(format), 1000);
+}
+
+function stopClock() {
+    if (clockInterval) {
+        clearInterval(clockInterval);
+        clockInterval = null;
+    }
+}
+
+/* ═══════════════════════ GREETING ═══════════════════════ */
+function getGreeting() {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Good morning';
+    if (hour < 17) return 'Good afternoon';
+    return 'Good evening';
+}
+
+function updateGreeting() {
+    greetingEl.textContent = getGreeting();
+}
+
+/* ═══════════════════════ TOAST ═══════════════════════ */
+function showToast(message) {
+    if (toastTimeout) clearTimeout(toastTimeout);
+    toastEl.textContent = message;
+    toastEl.classList.add('show');
+    toastTimeout = setTimeout(() => {
+        toastEl.classList.remove('show');
+        toastTimeout = null;
+    }, 2000);
+}
+
+/* ═══════════════════════ COPY QUOTE ═══════════════════════ */
+function copyQuote() {
+    const text = `\u201C${currentQuote.q}\u201D \u2014 ${currentQuote.a}`;
+    navigator.clipboard.writeText(text).then(() => {
+        showToast('Quote copied!');
+    }).catch(() => {
+        showToast('Failed to copy');
+    });
+}
+
+/* ═══════════════════════ FAVORITES ═══════════════════════ */
+async function toggleFavorite() {
+    const data = await storageGet(['favorites']);
+    const favs = data.favorites || [];
+
+    const idx = favs.findIndex((f) => f.q === currentQuote.q && f.a === currentQuote.a);
+    if (idx >= 0) {
+        favs.splice(idx, 1);
+        showToast('Removed from favorites');
+    } else {
+        if (favs.length >= MAX_FAVORITES) {
+            showToast('Favorites list is full (max 50)');
+            return;
+        }
+        favs.push({ q: currentQuote.q, a: currentQuote.a });
+        showToast('Added to favorites!');
+    }
+
+    await storageSet({ favorites: favs });
+    updateFavButton();
+    updateFavoritesCount(favs);
+}
+
+function updateFavButton() {
+    storageGet(['favorites']).then((data) => {
+        const favs = data.favorites || [];
+        const isFav = favs.some((f) => f.q === currentQuote.q && f.a === currentQuote.a);
+        favBtn.classList.toggle('active', isFav);
+        favIcon.setAttribute('fill', isFav ? 'currentColor' : 'none');
+    });
+}
+
+function updateFavoritesCount(favs) {
+    const count = (favs && favs.length) || 0;
+    favoritesCountEl.textContent = count > 0 ? `(${count})` : '';
+}
+
+function openFavoritesModal() {
+    storageGet(['favorites']).then((data) => {
+        renderFavoritesModal(data.favorites || []);
+        favoritesModal.classList.remove('hidden');
+    });
+}
+
+function closeFavoritesModal() {
+    favoritesModal.classList.add('hidden');
+}
+
+function renderFavoritesModal(favs) {
+    if (!favs || favs.length === 0) {
+        favoritesModalList.innerHTML = '<p class="favorites-empty">No favorites yet \u2014 tap \u2665 on a quote to save it here.</p>';
+        return;
+    }
+    favoritesModalList.innerHTML = '';
+    favs.forEach((fav, i) => {
+        const item = document.createElement('div');
+        item.className = 'favorite-item';
+
+        const content = document.createElement('div');
+        content.className = 'favorite-content';
+
+        const text = document.createElement('span');
+        text.className = 'favorite-text';
+        text.textContent = `\u201C${fav.q}\u201D`;
+
+        const author = document.createElement('span');
+        author.className = 'favorite-author';
+        author.textContent = `\u2014 ${fav.a}`;
+
+        content.appendChild(text);
+        content.appendChild(author);
+
+        const actions = document.createElement('div');
+        actions.className = 'favorite-actions';
+
+        const copyFavBtn = document.createElement('button');
+        copyFavBtn.type = 'button';
+        copyFavBtn.className = 'favorite-copy';
+        copyFavBtn.title = 'Copy quote';
+        copyFavBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
+        copyFavBtn.addEventListener('click', () => {
+            const text = `\u201C${fav.q}\u201D \u2014 ${fav.a}`;
+            navigator.clipboard.writeText(text).then(() => showToast('Quote copied!'));
+        });
+
+        const removeBtn = document.createElement('button');
+        removeBtn.type = 'button';
+        removeBtn.className = 'favorite-remove';
+        removeBtn.title = 'Remove from favorites';
+        removeBtn.textContent = '\u00D7';
+        removeBtn.addEventListener('click', () => removeFavorite(i));
+
+        actions.appendChild(copyFavBtn);
+        actions.appendChild(removeBtn);
+
+        item.appendChild(content);
+        item.appendChild(actions);
+        favoritesModalList.appendChild(item);
+    });
+}
+
+async function removeFavorite(index) {
+    const data = await storageGet(['favorites']);
+    const favs = data.favorites || [];
+    favs.splice(index, 1);
+    await storageSet({ favorites: favs });
+    updateFavButton();
+    updateFavoritesCount(favs);
+    renderFavoritesModal(favs);
+    showToast('Removed from favorites');
+}
+
+/* ═══════════════════════ HELPERS ═══════════════════════ */
 function presetImageUrl(presetId) {
     return `backgrounds/${presetId}.webp`;
 }
@@ -226,6 +462,16 @@ function newShortcutId() {
     return `s_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
 }
 
+function stringToColor(str) {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+        hash = str.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    const hue = Math.abs(hash) % 360;
+    return `hsl(${hue}, 45%, 40%)`;
+}
+
+/* ═══════════════════════ UI HELPERS ═══════════════════════ */
 function updatePresetButtonsActive(activeId) {
     bgPresetGrid.querySelectorAll('.bg-preset-btn').forEach((btn) => {
         btn.classList.toggle('active', btn.dataset.preset === activeId);
@@ -240,17 +486,18 @@ function applyQuotePosition(position) {
     quotePositionSelect.value = pos;
 }
 
+/* ═══════════════════════ BOOKMARKS ═══════════════════════ */
 function createBookmarkTile(item) {
     const tile = document.createElement('div');
     tile.className = 'bookmark-tile';
 
-    const editBtn = document.createElement('button');
-    editBtn.type = 'button';
-    editBtn.className = 'bookmark-edit-btn';
-    editBtn.title = 'Edit bookmark';
-    editBtn.setAttribute('aria-label', `Edit ${item.title}`);
-    editBtn.textContent = '✎';
-    editBtn.addEventListener('click', (e) => {
+    const editBtnEl = document.createElement('button');
+    editBtnEl.type = 'button';
+    editBtnEl.className = 'bookmark-edit-btn';
+    editBtnEl.title = 'Edit bookmark';
+    editBtnEl.setAttribute('aria-label', `Edit ${item.title}`);
+    editBtnEl.textContent = '\u270E';
+    editBtnEl.addEventListener('click', (e) => {
         e.preventDefault();
         e.stopPropagation();
         openBookmarkModal(item.id);
@@ -264,13 +511,14 @@ function createBookmarkTile(item) {
     const icon = document.createElement('span');
     icon.className = 'bookmark-icon';
     icon.textContent = shortcutInitial(item.title, item.url);
+    icon.style.backgroundColor = stringToColor(item.title || item.url);
 
     const label = document.createElement('span');
     label.textContent = item.title;
 
     link.appendChild(icon);
     link.appendChild(label);
-    tile.appendChild(editBtn);
+    tile.appendChild(editBtnEl);
     tile.appendChild(link);
     return tile;
 }
@@ -310,10 +558,15 @@ function renderBookmarks(shortcuts, rows) {
     );
 }
 
+/* ═══════════════════════ BOOKMARK MODAL ═══════════════════════ */
 function openBookmarkModal(bookmarkId) {
     editingBookmarkId = bookmarkId;
     bookmarkModalDelete.classList.toggle('hidden', !bookmarkId);
     bookmarkModalHeading.textContent = bookmarkId ? 'Edit bookmark' : 'Add bookmark';
+
+    /* Clear validation errors */
+    bookmarkModalName.classList.remove('input-error');
+    bookmarkModalUrl.classList.remove('input-error');
 
     if (bookmarkId) {
         storageGet(['shortcuts']).then((data) => {
@@ -338,13 +591,29 @@ function closeBookmarkModal() {
 async function saveBookmarkFromModal() {
     const title = bookmarkModalName.value.trim();
     const url = normalizeUrl(bookmarkModalUrl.value);
-    if (!title || !url) return;
 
-    try {
-        new URL(url);
-    } catch {
-        return;
+    /* Clear previous errors and force reflow so animation can replay */
+    bookmarkModalName.classList.remove('input-error');
+    bookmarkModalUrl.classList.remove('input-error');
+    void bookmarkModalName.offsetHeight;
+
+    let hasError = false;
+    if (!title) {
+        bookmarkModalName.classList.add('input-error');
+        hasError = true;
     }
+    if (!url) {
+        bookmarkModalUrl.classList.add('input-error');
+        hasError = true;
+    } else {
+        try {
+            new URL(url);
+        } catch {
+            bookmarkModalUrl.classList.add('input-error');
+            hasError = true;
+        }
+    }
+    if (hasError) return;
 
     const data = await storageGet(['shortcuts']);
     const list = data.shortcuts || [];
@@ -372,6 +641,7 @@ async function deleteBookmarkFromModal() {
     closeBookmarkModal();
 }
 
+/* ═══════════════════════ MIGRATION ═══════════════════════ */
 async function migrateLegacyDashboardFlags(data) {
     if (data.dashboardEnabled && data.searchEnabled === undefined) {
         const patch = { searchEnabled: true, bookmarksEnabled: true };
@@ -381,6 +651,7 @@ async function migrateLegacyDashboardFlags(data) {
     return data;
 }
 
+/* ═══════════════════════ APPLY SETTINGS ═══════════════════════ */
 function applyDashboard(settings) {
     const searchOn = !!(settings.searchEnabled ?? DEFAULTS.searchEnabled);
     const bookmarksOn = !!(settings.bookmarksEnabled ?? DEFAULTS.bookmarksEnabled);
@@ -439,7 +710,15 @@ function applyAppearance(settings) {
     document.body.classList.toggle('font-not-italic', !fontItalic);
     fontItalicCheck.checked = fontItalic;
 
-    if (bgMode === 'preset' && bgPreset) {
+    bgCustomRemove.classList.toggle('hidden', !cachedBgCustomImage);
+
+    if (bgMode === 'custom' && cachedBgCustomImage) {
+        document.body.classList.add('has-bg-preset');
+        document.body.style.backgroundImage = `url("${cachedBgCustomImage}")`;
+        document.body.style.backgroundColor = '';
+        bgPicker.value = bgColor;
+        updatePresetButtonsActive(null);
+    } else if (bgMode === 'preset' && bgPreset) {
         document.body.classList.add('has-bg-preset');
         document.body.style.backgroundImage = `url("${presetImageUrl(bgPreset)}")`;
         document.body.style.backgroundColor = '';
@@ -454,25 +733,96 @@ function applyAppearance(settings) {
     }
 }
 
+function applyClock(settings) {
+    const clockOn = !!(settings.clockEnabled ?? DEFAULTS.clockEnabled);
+    const format = settings.clockFormat ?? DEFAULTS.clockFormat;
+
+    clockContainer.classList.toggle('hidden', !clockOn);
+    clockEnabledCheck.checked = clockOn;
+    clockFormatSelect.value = format;
+    clockFormatRow.classList.toggle('disabled', !clockOn);
+
+    if (clockOn) {
+        startClock(format);
+    } else {
+        stopClock();
+    }
+}
+
+function applyGreeting(settings) {
+    const greetingOn = !!(settings.greetingEnabled ?? DEFAULTS.greetingEnabled);
+    greetingEl.classList.toggle('hidden', !greetingOn);
+    greetingEnabledCheck.checked = greetingOn;
+
+    if (greetingOn) {
+        updateGreeting();
+    }
+}
+
 function applyAllSettings(settings) {
     applyAppearance(settings);
     applyQuotePosition(settings.quotePosition ?? DEFAULTS.quotePosition);
     applyDashboard(settings);
+    applyClock(settings);
+    applyGreeting(settings);
+    updateFavoritesCount(settings.favorites || []);
 }
 
+/* ═══════════════════════ LOAD / SAVE ═══════════════════════ */
 async function loadAndApplySettings() {
-    let data = await storageGet([...SETTINGS_KEYS.filter((k) => k !== 'quoteBatch'), 'dashboardEnabled']);
+    let data = await storageGet([...SETTINGS_KEYS.filter((k) => k !== 'quoteBatch'), 'dashboardEnabled', 'bgCustomImage']);
     data = await migrateLegacyDashboardFlags(data);
+    cachedBgCustomImage = data.bgCustomImage || null;
     applyAllSettings(data);
     return data;
 }
 
 async function saveSettings(partial) {
+    if (partial.bgCustomImage !== undefined) {
+        cachedBgCustomImage = partial.bgCustomImage;
+    }
     await storageSet(partial);
     const data = await storageGet(SETTINGS_KEYS.filter((k) => k !== 'quoteBatch'));
+    data.bgCustomImage = cachedBgCustomImage;
     applyAllSettings(data);
 }
 
+/* ═══════════════════════ IMAGE PROCESSING ═══════════════════════ */
+function processImage(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const img = new Image();
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                const MAX_W = 1920;
+                const MAX_H = 1080;
+                let w = img.width;
+                let h = img.height;
+
+                if (w > MAX_W || h > MAX_H) {
+                    const ratio = Math.min(MAX_W / w, MAX_H / h);
+                    w = Math.round(w * ratio);
+                    h = Math.round(h * ratio);
+                }
+
+                canvas.width = w;
+                canvas.height = h;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, w, h);
+
+                const dataUrl = canvas.toDataURL('image/jpeg', 0.82);
+                resolve(dataUrl);
+            };
+            img.onerror = () => reject(new Error('Failed to load image'));
+            img.src = e.target.result;
+        };
+        reader.onerror = () => reject(new Error('Failed to read file'));
+        reader.readAsDataURL(file);
+    });
+}
+
+/* ═══════════════════════ PRESET GRID ═══════════════════════ */
 function buildPresetGrid() {
     bgPresetGrid.innerHTML = '';
     BG_PRESETS.forEach(({ id, label }) => {
@@ -489,6 +839,7 @@ function buildPresetGrid() {
     });
 }
 
+/* ═══════════════════════ NEXT QUOTE ═══════════════════════ */
 async function getNextQuote() {
     const data = await storageGet(['quoteBatch']);
     const batch = data.quoteBatch || [];
@@ -506,6 +857,47 @@ async function getNextQuote() {
     }
 }
 
+/* ═══════════════════════ SETTINGS PANEL ═══════════════════════ */
+function openSettings() {
+    settingsPanelOpen = true;
+    settingsPanel.classList.add('open');
+}
+
+function closeSettings() {
+    settingsPanelOpen = false;
+    settingsPanel.classList.remove('open');
+}
+
+function toggleSettings() {
+    if (settingsPanelOpen) closeSettings();
+    else openSettings();
+}
+
+/* ═══════════════════════ ENTRY ANIMATION ═══════════════════════ */
+function playEntryAnimation() {
+    const targets = [
+        document.querySelector('#clock-container:not(.hidden)'),
+        document.querySelector('#greeting:not(.hidden)'),
+        quoteEl,
+        authorEl,
+        document.getElementById('quote-actions'),
+    ].filter(Boolean);
+
+    let delay = 0;
+    targets.forEach((el) => {
+        el.style.animationDelay = `${delay}ms`;
+        el.classList.add('anim-enter');
+        el.addEventListener('animationend', () => {
+            el.classList.remove('anim-enter');
+            el.style.animationDelay = '';
+        }, { once: true });
+        delay += 100;
+    });
+}
+
+/* ═══════════════════════ EVENT LISTENERS ═══════════════════════ */
+
+/* Search */
 searchForm.addEventListener('submit', (e) => {
     e.preventDefault();
     const query = searchInput.value.trim();
@@ -517,8 +909,29 @@ searchForm.addEventListener('submit', (e) => {
     });
 });
 
-editBtn.addEventListener('click', () => settingsPanel.classList.toggle('hidden'));
+/* Settings panel toggle */
+editBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    toggleSettings();
+});
 
+settingsPanel.addEventListener('click', (e) => {
+    e.stopPropagation();
+});
+
+/* Close settings on outside click */
+document.addEventListener('click', (e) => {
+    if (settingsPanelOpen &&
+        !settingsPanel.contains(e.target) &&
+        e.target !== editBtn &&
+        !bookmarkModal.contains(e.target) &&
+        !favoritesModal.contains(e.target) &&
+        !confirmModal.contains(e.target)) {
+        closeSettings();
+    }
+});
+
+/* Color pickers */
 bgPicker.addEventListener('input', (e) => {
     saveSettings({
         bgMode: 'solid',
@@ -531,6 +944,7 @@ textPicker.addEventListener('input', (e) => {
     saveSettings({ textColor: e.target.value });
 });
 
+/* Font controls */
 fontSizeSelect.addEventListener('change', (e) => {
     saveSettings({ fontSize: e.target.value });
 });
@@ -543,25 +957,18 @@ fontItalicCheck.addEventListener('change', (e) => {
     saveSettings({ fontItalic: e.target.checked });
 });
 
+/* Position */
 quotePositionSelect.addEventListener('change', (e) => {
     saveSettings({ quotePosition: e.target.value });
 });
 
+/* Dashboard */
 searchEnabledCheck.addEventListener('change', (e) => {
     saveSettings({ searchEnabled: e.target.checked });
 });
 
 bookmarksEnabledCheck.addEventListener('change', (e) => {
     saveSettings({ bookmarksEnabled: e.target.checked });
-});
-
-bookmarkModalSave.addEventListener('click', () => saveBookmarkFromModal());
-bookmarkModalCancel.addEventListener('click', () => closeBookmarkModal());
-bookmarkModalDelete.addEventListener('click', () => deleteBookmarkFromModal());
-bookmarkModalBackdrop.addEventListener('click', () => closeBookmarkModal());
-
-bookmarkModal.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') closeBookmarkModal();
 });
 
 dashboardThemeSelect.addEventListener('change', (e) => {
@@ -576,17 +983,100 @@ searchEngineSelect.addEventListener('change', (e) => {
     saveSettings({ searchEngine: e.target.value });
 });
 
-resetSettingsBtn.addEventListener('click', async () => {
-    const data = await storageGet(['quoteBatch', 'lastRemoteQuotes', 'lastRemoteQuotesAt']);
+/* Clock & Greeting */
+clockEnabledCheck.addEventListener('change', (e) => {
+    saveSettings({ clockEnabled: e.target.checked });
+});
+
+clockFormatSelect.addEventListener('change', (e) => {
+    saveSettings({ clockFormat: e.target.value });
+});
+
+greetingEnabledCheck.addEventListener('change', (e) => {
+    saveSettings({ greetingEnabled: e.target.checked });
+});
+
+/* Copy & Favorite */
+copyBtn.addEventListener('click', copyQuote);
+favBtn.addEventListener('click', toggleFavorite);
+
+/* Bookmark modal */
+bookmarkModalSave.addEventListener('click', () => saveBookmarkFromModal());
+bookmarkModalCancel.addEventListener('click', () => closeBookmarkModal());
+bookmarkModalDelete.addEventListener('click', () => deleteBookmarkFromModal());
+bookmarkModalBackdrop.addEventListener('click', () => closeBookmarkModal());
+
+bookmarkModal.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeBookmarkModal();
+});
+
+/* Favorites modal */
+viewFavoritesBtn.addEventListener('click', openFavoritesModal);
+favoritesModalClose.addEventListener('click', closeFavoritesModal);
+favoritesModalBackdrop.addEventListener('click', closeFavoritesModal);
+favoritesModal.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeFavoritesModal();
+});
+
+/* Reset — with confirmation */
+function openConfirmModal() {
+    confirmModal.classList.remove('hidden');
+}
+
+function closeConfirmModal() {
+    confirmModal.classList.add('hidden');
+}
+
+resetSettingsBtn.addEventListener('click', openConfirmModal);
+confirmModalCancel.addEventListener('click', closeConfirmModal);
+confirmModalBackdrop.addEventListener('click', closeConfirmModal);
+confirmModal.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeConfirmModal();
+});
+
+confirmModalConfirm.addEventListener('click', async () => {
+    const data = await storageGet(['quoteBatch', 'lastRemoteQuotes', 'lastRemoteQuotesAt', 'favorites']);
+    cachedBgCustomImage = null;
     await storageSet({
         ...DEFAULTS,
+        bgCustomImage: null,
         quoteBatch: data.quoteBatch,
         lastRemoteQuotes: data.lastRemoteQuotes,
         lastRemoteQuotesAt: data.lastRemoteQuotesAt,
+        favorites: data.favorites || [],
     });
+    closeConfirmModal();
     closeBookmarkModal();
-    applyAllSettings(DEFAULTS);
+    closeSettings();
+    applyAllSettings({ ...DEFAULTS, favorites: data.favorites || [] });
+    showToast('Settings reset to defaults');
 });
 
+/* Custom background upload */
+bgCustomBtn.addEventListener('click', () => bgCustomInput.click());
+
+bgCustomInput.addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    bgCustomInput.value = '';
+    try {
+        const dataUrl = await processImage(file);
+        await saveSettings({ bgMode: 'custom', bgCustomImage: dataUrl });
+        showToast('Background updated!');
+    } catch {
+        showToast('Failed to process image');
+    }
+});
+
+bgCustomRemove.addEventListener('click', async () => {
+    cachedBgCustomImage = null;
+    await storageSet({ bgCustomImage: null });
+    await saveSettings({ bgMode: 'solid', bgPreset: null });
+    showToast('Custom image removed');
+});
+
+/* ═══════════════════════ INIT ═══════════════════════ */
 buildPresetGrid();
-loadAndApplySettings().then(() => getNextQuote());
+loadAndApplySettings().then(() => {
+    getNextQuote().then(() => playEntryAnimation());
+});

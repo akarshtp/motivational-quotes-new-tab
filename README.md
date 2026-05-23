@@ -1,35 +1,42 @@
 # Motivational Quotes for New Tab
 
-Replace your default new tab with a clean, distraction free motivational quote. Built as a lightweight, privacy focused extension focused on speed and simple customization.
+This extension replaces your default new tab with a clean and distraction-free motivational quote. I built this as a lightweight and privacy-focused project that prioritizes speed and easy customization.
 
-## Why this project?
+## Why I Built This
 
 A personal hobby project: fast to open, pleasant to read, and easy to make your own.
 
 ## Features
 
-* **Daily inspiration**: A new motivational quote every time you open a tab.
-* **Minimalist design**: The quote stays front and center.
-* **Custom appearance** (edit button, bottom right):
-  * **Text**: size (small / medium / large), sans / serif / system fonts, italic on/off, text color.
-  * **Background**: solid color or one of eight bundled gradient presets with a readability overlay and text shadow.
-  * **Reset**: restore default look in one click.
-* **Lightning fast**: Local presets and bundled quotes keep new tabs snappy; remote quotes load in the background when online.
+* **Daily Inspiration**: See a new motivational quote every time you open a new tab.
+* **Minimalist Design**: The quote stays front and center, with smooth fade-in animations.
+* **Useful Tools**: 
+  * Live clock and date with 12-hour or 24-hour options.
+  * A time-based greeting.
+  * A dashboard option to show a search bar and your favorite bookmarks.
+  * Click to copy quotes directly to your clipboard.
+  * Save your favorite quotes to view them later.
+* **Custom Appearance**: Click the edit button in the bottom right to change how things look.
+  * **Text**: Adjust the size, choose between sans, serif, monospace, cursive, or system fonts, toggle italics, and pick any text color.
+  * **Background**: Pick a solid color, select one of the bundled gradient presets, or upload your own custom background image.
+  * **Layout**: Move the quote to the center, top, or bottom of the screen.
+  * **Reset**: Easily restore the default settings with a confirmation prompt.
+* **Speed**: Local presets and bundled quotes keep your new tabs loading instantly. It fetches fresh quotes in the background when you are online.
 
 ## Privacy and Safety
 
-Your privacy is a priority. This extension is built as a low-data project:
+Your privacy is the main priority here. This extension is built to handle as little data as possible.
 
-* **External data**: Fresh quotes may be fetched from the [ZenQuotes](https://zenquotes.io/) API. No personal data or identifiers are sent with those requests.
-* **Local customization**: Colors, font choices, and background preset selections are stored only in your browser (`storage.local`). Nothing is uploaded.
-* **No tracking**: No browsing history or usage analytics.
-* **No data collection**: No personal information is collected, stored on a server, or sold.
-* **Minimal permissions**: `storage` for quotes and settings; network access only for the quote API host declared in the manifest.
-* **Open source**: Transparent code, no ads or hidden scripts.
+* **External Data**: Fresh quotes are fetched from the [ZenQuotes](https://zenquotes.io/) API. No personal data or identifiers are ever sent with these requests.
+* **Local Customization**: All your settings, favorite quotes, bookmarks, and custom background images are stored locally in your browser. Nothing is ever uploaded to a server.
+* **No Tracking**: There is zero tracking of your browsing history or usage.
+* **No Data Collection**: No personal information is collected, stored, or sold.
+* **Minimal Permissions**: The only permissions used are local storage for your settings and network access limited to the quote API.
+* **Open Source**: The code is completely transparent with no ads or hidden scripts.
 
-## Develop
+## Development
 
-Bundled background images are generated once with:
+If you want to generate the bundled background images, you can run the following commands:
 
 ```bash
 python -m pip install pillow
@@ -43,4 +50,4 @@ MIT License: free to explore, fork, or learn from.
 ---
 Developed with ❤️ by Akarsh T P
 
-![Dashboard Demo](screenshot/demo1.png)
+![Dashboard Demo](screenshot/v2/demo2.png)

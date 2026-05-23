@@ -2,6 +2,8 @@
 <html lang="en">
 <head>
     <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>New Tab</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -21,10 +23,25 @@
         </section>
 
         <section id="quote-container">
+            <div id="clock-container" class="hidden">
+                <p id="clock-time"></p>
+                <p id="clock-date"></p>
+            </div>
+            <p id="greeting" class="hidden"></p>
             <p id="quote"></p>
             <p id="author"></p>
+            <div id="quote-actions">
+                <button type="button" id="copy-btn" title="Copy quote" aria-label="Copy quote">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                </button>
+                <button type="button" id="fav-btn" title="Save to favorites" aria-label="Save to favorites">
+                    <svg id="fav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                </button>
+            </div>
         </section>
     </main>
+
+    <div id="toast" class="toast" aria-live="polite"></div>
 
     <div id="bookmark-modal" class="bookmark-modal hidden" role="dialog" aria-modal="true" aria-labelledby="bookmark-modal-heading">
         <div class="bookmark-modal-backdrop" id="bookmark-modal-backdrop"></div>
@@ -40,7 +57,30 @@
         </div>
     </div>
 
-    <div id="settings-panel" class="hidden">
+    <div id="favorites-modal" class="favorites-modal hidden" role="dialog" aria-modal="true" aria-labelledby="favorites-modal-heading">
+        <div class="favorites-modal-backdrop" id="favorites-modal-backdrop"></div>
+        <div class="favorites-modal-card">
+            <div class="favorites-modal-header">
+                <h4 id="favorites-modal-heading">Favorite Quotes</h4>
+                <button type="button" id="favorites-modal-close" class="favorites-modal-close" aria-label="Close">&times;</button>
+            </div>
+            <div id="favorites-modal-list" class="favorites-modal-list"></div>
+        </div>
+    </div>
+
+    <div id="confirm-modal" class="confirm-modal hidden" role="alertdialog" aria-modal="true" aria-labelledby="confirm-modal-heading">
+        <div class="confirm-modal-backdrop" id="confirm-modal-backdrop"></div>
+        <div class="confirm-modal-card">
+            <h4 id="confirm-modal-heading">Reset to defaults?</h4>
+            <p class="confirm-modal-body">Your bookmarks, appearance preferences, and all customizations will be lost. Favorites will be kept.</p>
+            <div class="confirm-modal-actions">
+                <button type="button" id="confirm-modal-cancel" class="bookmark-modal-cancel">Cancel</button>
+                <button type="button" id="confirm-modal-confirm" class="confirm-modal-confirm">Reset</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="settings-panel">
         <section class="settings-section">
             <h3 class="settings-heading">Layout</h3>
             <label class="settings-row">
@@ -50,6 +90,21 @@
                     <option value="top">Top</option>
                     <option value="bottom">Bottom</option>
                 </select>
+            </label>
+            <label class="settings-row settings-check">
+                <input type="checkbox" id="clock-enabled-check" checked>
+                Show clock
+            </label>
+            <label class="settings-row" id="clock-format-row">
+                Clock format
+                <select id="clock-format-select">
+                    <option value="12h">12-hour</option>
+                    <option value="24h">24-hour</option>
+                </select>
+            </label>
+            <label class="settings-row settings-check">
+                <input type="checkbox" id="greeting-enabled-check" checked>
+                Show greeting
             </label>
         </section>
 
@@ -104,6 +159,8 @@
                 <select id="font-family-select">
                     <option value="sans">Sans</option>
                     <option value="serif">Serif</option>
+                    <option value="mono">Mono</option>
+                    <option value="cursive">Cursive</option>
                     <option value="system">System</option>
                 </select>
             </label>
@@ -125,7 +182,15 @@
             </label>
             <p class="settings-hint">Or pick a preset:</p>
             <div id="bg-preset-grid" class="bg-preset-grid"></div>
+            <p class="settings-hint">Or use your own:</p>
+            <div class="custom-upload-row">
+                <button type="button" id="bg-custom-btn" class="custom-upload-btn">Upload image</button>
+                <button type="button" id="bg-custom-remove" class="custom-upload-remove hidden">Remove</button>
+            </div>
+            <input type="file" id="bg-custom-input" accept="image/*" class="hidden">
         </section>
+
+        <button type="button" id="view-favorites-btn" class="view-favorites-btn">View Favorites <span id="favorites-count"></span></button>
 
         <button type="button" id="reset-settings-btn" class="reset-btn">Reset to defaults</button>
         <a href="https://github.com/akarshtp/motivational-quotes-new-tab" target="_blank" rel="noopener noreferrer" id="gh-link">GitHub Project</a>
