@@ -1,9 +1,9 @@
 {
     "manifest_version": 3,
     "name": "Motivational Quotes for New Tab",
-    "version": "2.0.0",
+    "version": "2.0.1",
     "author": "Akarsh T P",
-    "description": "Fresh motivation on every new tab. Clean, calm, and zero tracking.",
+    "description": "A lightning fast, zero data extension that replaces your new tab with motivational quotes. Fast, beautiful, and customizable.",
     "homepage_url": "https://github.com/akarshtp/motivational-quotes-new-tab",
     "icons": {
       "48": "icons/icon-48.png",
