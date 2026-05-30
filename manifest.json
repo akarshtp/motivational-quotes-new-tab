@@ -1,6 +1,6 @@
 {
     "manifest_version": 3,
-    "name": "Motivational Quotes for New Tab",
+    "name": "MotivTab: Motivational Quotes for New Tab",
     "version": "2.0.1",
     "author": "Akarsh T P",
     "description": "A lightning fast, zero data extension that replaces your new tab with motivational quotes. Fast, beautiful, and customizable.",
